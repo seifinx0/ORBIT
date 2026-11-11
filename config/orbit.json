@@ -1,0 +1,6 @@
+{
+  "display": { "width": 1920, "height": 1080, "refresh": "vsync" },
+  "graphics": { "backend": "sce-video-out", "buffers": 2 },
+  "input": { "device": "dualshock4", "navigation": "dpad-and-cross" },
+  "ui": { "animations": true, "reduced_motion": false }
+}

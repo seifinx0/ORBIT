@@ -1,0 +1,30 @@
+# Build outputs
+build/
+out/
+dist/
+*.o
+*.elf
+*.oelf
+*.bin
+*.pkg
+*.gp4
+
+# Intermediate files
+*.d
+*.tmp
+*.log
+*.bak
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local configuration
+config/local.json
+/sce_sys/param.sfo
