@@ -24,8 +24,10 @@ The replacement was executed successfully for `sfo_new`, multiple `sfo_setentry`
 - Extracted package payloads matched their build inputs byte-for-byte: `eboot.bin`, `icon0.png`, `sce_sys/about/right.sprx`, `sce_module/libc.prx`, and `sce_module/libSceFios2.prx`.
 - `pkg_listentries` and `pkg_extract` confirmed the package metadata and inner payload. The package builder also generates the expected keystone entry.
 
-The user reports the Milestone 1 and 0.2.0 FreeType typography builds were installed and tested on a physical PS4 at 1920×1080; the original foundation was observed at approximately 59.95 FPS.
+The user reports that Milestone 1, v0.2.0 typography, and v0.3.0 texture rendering were installed and tested on a physical PS4. The verified graphics output is 1920×1080 with double-buffered SceVideoOut presentation; the original foundation was observed at approximately 59.95 FPS.
 
 The 0.2.0 package kept the same output path and Content ID, set `APP_VER` to `0.2.0`, and included the Quicksand font plus OFL notice.
 
-The 0.3.0 package preserves that identity, adds `assets/images/orbit-mark.png`, and contains the cached PNG decoder and RGBA renderer. `make test-host`, the native ELF/FSELF build, `pkg_build`, and `make inspect` passed. `pkg_validate` accepted every listed hash, digest, and signature. Extracted `PARAM_SFO` reports `APP_VER=0.3.0`, `TITLE_ID=ORBT00001`, and `CONTENT_ID=IV0000-ORBT00001_00-ORBITFOUNDATION1`. Extraction confirmed `eboot.bin`, the Quicksand font and license, and the ORBIT PNG match their build inputs byte-for-byte. The package is 6,619,136 bytes at `build/IV0000-ORBT00001_00-ORBITFOUNDATION1.pkg`. This graphics update has not yet been tested on physical hardware; see [Milestone 2 progress](milestone-2-graphics.md).
+The 0.3.0 package preserves that identity, adds `assets/images/orbit-mark.png`, and contains the cached PNG decoder and RGBA renderer. Its PKG passed `pkg_validate`, metadata inspection, and byte-for-byte payload checks, and the user reports physical PS4 success.
+
+For the 0.4.0 UI/controller checkpoint, `make test-host`, the native ELF/FSELF build, `pkg_build`, and `make inspect` must be rerun. The expected package identity remains Title ID `ORBT00001` and Content ID `IV0000-ORBT00001_00-ORBITFOUNDATION1`, with `APP_VER=0.4.0`. This update has not yet been tested on physical hardware; see [Milestone 2 progress](milestone-2-graphics.md) for the controller checklist.

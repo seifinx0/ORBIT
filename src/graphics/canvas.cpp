@@ -7,10 +7,30 @@
 
 namespace orbit::graphics {
 Canvas::Canvas(std::uint32_t* pixels, int width, int height) noexcept
-    : pixels_(pixels), width_(width), height_(height) {}
+    : pixels_(pixels), width_(width), height_(height), clip_{0, 0, width, height} {}
+
+bool Canvas::push_clip(int x, int y, int width, int height) noexcept {
+    if (clip_depth_ >= kClipDepth || width <= 0 || height <= 0) return false;
+    clip_stack_[clip_depth_++] = clip_;
+    const auto right = static_cast<std::int64_t>(x) + width;
+    const auto bottom = static_cast<std::int64_t>(y) + height;
+    const int left = std::max(clip_.x, x), top = std::max(clip_.y, y);
+    const auto clip_right = static_cast<std::int64_t>(clip_.x) + clip_.width;
+    const auto clip_bottom = static_cast<std::int64_t>(clip_.y) + clip_.height;
+    const int clipped_right = static_cast<int>(std::min(clip_right, right));
+    const int clipped_bottom = static_cast<int>(std::min(clip_bottom, bottom));
+    clip_ = {left, top, std::max(0, clipped_right - left), std::max(0, clipped_bottom - top)};
+    return true;
+}
+
+void Canvas::pop_clip() noexcept {
+    if (clip_depth_ == 0) return;
+    clip_ = clip_stack_[--clip_depth_];
+}
 
 void Canvas::pixel(int x, int y, Color color) noexcept {
-    if (x < 0 || y < 0 || x >= width_ || y >= height_) return;
+    if (x < clip_.x || y < clip_.y || x >= clip_.x + clip_.width ||
+        y >= clip_.y + clip_.height) return;
     pixels_[static_cast<std::size_t>(y) * width_ + x] =
         0x80000000u | (static_cast<std::uint32_t>(color.r) << 16) |
         (static_cast<std::uint32_t>(color.g) << 8) | color.b;
@@ -27,9 +47,9 @@ void Canvas::fill_rect_alpha(int x, int y, int width, int height, Color color,
     if (!pixels_ || width <= 0 || height <= 0 || opacity == 0) return;
     const auto right = static_cast<std::int64_t>(x) + width;
     const auto bottom = static_cast<std::int64_t>(y) + height;
-    const int x0 = std::max(0, x), y0 = std::max(0, y);
-    const int x1 = static_cast<int>(std::min<std::int64_t>(width_, right));
-    const int y1 = static_cast<int>(std::min<std::int64_t>(height_, bottom));
+    const int x0 = std::max(clip_.x, x), y0 = std::max(clip_.y, y);
+    const int x1 = static_cast<int>(std::min<std::int64_t>(clip_.x + clip_.width, right));
+    const int y1 = static_cast<int>(std::min<std::int64_t>(clip_.y + clip_.height, bottom));
     if (x0 >= x1 || y0 >= y1) return;
     if (opacity == 255) {
         const std::uint32_t value = 0x80000000u | (static_cast<std::uint32_t>(color.r) << 16) |
@@ -50,8 +70,8 @@ void Canvas::fill_vertical_gradient(int x, int y, int width, int height,
     if (!pixels_ || width <= 0 || height <= 0) return;
     const auto end_x = static_cast<std::int64_t>(x) + width;
     const auto end_y = static_cast<std::int64_t>(y) + height;
-    const int x0 = std::max(0, x), x1 = static_cast<int>(std::min<std::int64_t>(width_, end_x));
-    const int y0 = std::max(0, y), y1 = static_cast<int>(std::min<std::int64_t>(height_, end_y));
+    const int x0 = std::max(clip_.x, x), x1 = static_cast<int>(std::min<std::int64_t>(clip_.x + clip_.width, end_x));
+    const int y0 = std::max(clip_.y, y), y1 = static_cast<int>(std::min<std::int64_t>(clip_.y + clip_.height, end_y));
     if (x0 >= x1 || y0 >= y1) return;
     for (int row = y0; row < y1; ++row) {
         const auto relative_y = static_cast<std::uint64_t>(static_cast<std::int64_t>(row) - y);
@@ -104,9 +124,9 @@ void Canvas::draw_rgba(const std::uint8_t* rgba, int source_width, int source_he
         width <= 0 || height <= 0) return;
     const auto end_x = static_cast<std::int64_t>(x) + width;
     const auto end_y = static_cast<std::int64_t>(y) + height;
-    const int x0 = std::max(0, x), y0 = std::max(0, y);
-    const int x1 = static_cast<int>(std::min<std::int64_t>(width_, end_x));
-    const int y1 = static_cast<int>(std::min<std::int64_t>(height_, end_y));
+    const int x0 = std::max(clip_.x, x), y0 = std::max(clip_.y, y);
+    const int x1 = static_cast<int>(std::min<std::int64_t>(clip_.x + clip_.width, end_x));
+    const int y1 = static_cast<int>(std::min<std::int64_t>(clip_.y + clip_.height, end_y));
     if (x0 >= x1 || y0 >= y1) return;
     for (int dy = y0; dy < y1; ++dy) {
         const double sy = (static_cast<double>(dy - y) + 0.5) * source_height / height - 0.5;
@@ -140,7 +160,8 @@ void Canvas::draw_rgba(const std::uint8_t* rgba, int source_width, int source_he
 }
 
 void Canvas::blend_pixel(int x, int y, Color color, std::uint8_t opacity) noexcept {
-    if (!pixels_ || x < 0 || y < 0 || x >= width_ || y >= height_ || opacity == 0) return;
+    if (!pixels_ || x < clip_.x || y < clip_.y || x >= clip_.x + clip_.width ||
+        y >= clip_.y + clip_.height || opacity == 0) return;
     auto& destination = pixels_[static_cast<std::size_t>(y) * width_ + x];
     if (opacity == 255) {
         destination = 0x80000000u | (static_cast<std::uint32_t>(color.r) << 16) |

@@ -1,5 +1,5 @@
 TITLE       := ORBIT Command Center
-VERSION     := 0.3.0
+VERSION     := 0.4.0
 TITLE_ID    := ORBT00001
 CONTENT_ID  := IV0000-ORBT00001_00-ORBITFOUNDATION1
 
@@ -34,10 +34,10 @@ else
 $(error Unsupported host OS: $(HOST_OS))
 endif
 
-SOURCES     := src/main.cpp src/platform/video_output.cpp src/graphics/canvas.cpp src/graphics/font_renderer.cpp src/graphics/texture.cpp
+SOURCES     := src/main.cpp src/platform/video_output.cpp src/platform/controller.cpp src/graphics/canvas.cpp src/graphics/font_renderer.cpp src/graphics/texture.cpp src/ui/ui.cpp src/input/navigation.cpp src/modules/dashboard.cpp
 OBJECTS     := $(patsubst src/%.cpp,build/obj/%.o,$(SOURCES))
 CXXFLAGS    := --target=x86_64-pc-freebsd12-elf -fPIC -funwind-tables -fno-exceptions -fno-rtti -O2 -c -Isrc -Iinclude -isysroot $(SDK) -isystem $(SDK)/include -isystem $(SDK)/include/c++/v1
-LDFLAGS     := -m elf_x86_64 -pie --script $(SDK)/link.x --eh-frame-hdr -L$(SDK)/lib -lc -lkernel -lc++ -lSceVideoOut -lSceSysmodule -lSceFreeType $(SDK)/lib/crt1.o
+LDFLAGS     := -m elf_x86_64 -pie --script $(SDK)/link.x --eh-frame-hdr -L$(SDK)/lib -lc -lkernel -lc++ -lSceVideoOut -lSceSysmodule -lSceFreeType -lScePad -lSceUserService $(SDK)/lib/crt1.o
 ASSETS      := $(shell find assets -type f ! -name .gitkeep -print | sort)
 HOST_CXX    ?= c++
 
@@ -56,7 +56,9 @@ $(PKGTOOL): $(PKGTOOL_STAMP)
 
 build/obj/%.o: src/%.cpp
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) -o $@ $<
+	$(CXX) $(CXXFLAGS) -MMD -MP -MF $(patsubst %.o,%.d,$@) -MT $@ -o $@ $<
+
+-include $(OBJECTS:.o=.d)
 
 build/orbit.elf: $(OBJECTS)
 	$(LD) $(OBJECTS) -o $@ $(LDFLAGS)
@@ -102,11 +104,26 @@ build/tests/texture_test: tests/texture_test.cpp src/graphics/texture.cpp src/gr
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) -std=c++17 -O2 -Wall -Wextra -Werror -Iinclude -idirafter $(SDK)/include -o $@ tests/texture_test.cpp src/graphics/texture.cpp src/graphics/canvas.cpp
 
+build/tests/navigation_test: tests/navigation_test.cpp src/input/navigation.cpp include/orbit/input/controller.hpp
+	@mkdir -p $(dir $@)
+	$(HOST_CXX) -std=c++17 -O2 -Wall -Wextra -Werror -Iinclude -o $@ tests/navigation_test.cpp src/input/navigation.cpp
+
+build/tests/ui_test: tests/ui_test.cpp src/ui/ui.cpp src/graphics/font_renderer.cpp src/graphics/texture.cpp src/graphics/canvas.cpp include/orbit/ui/ui.hpp assets/fonts/Quicksand-Medium.ttf
+	@mkdir -p $(dir $@)
+	$(HOST_CXX) -std=c++17 -O2 -Wall -Wextra -Werror -Iinclude -idirafter $(SDK)/include $(shell pkg-config --cflags freetype2) -o $@ tests/ui_test.cpp src/ui/ui.cpp src/graphics/font_renderer.cpp src/graphics/texture.cpp src/graphics/canvas.cpp $(shell pkg-config --libs freetype2)
+
+build/tests/dashboard_test: tests/dashboard_test.cpp src/modules/dashboard.cpp src/ui/ui.cpp src/input/navigation.cpp src/graphics/font_renderer.cpp src/graphics/texture.cpp src/graphics/canvas.cpp include/orbit/modules/dashboard.hpp assets/fonts/Quicksand-Medium.ttf assets/images/orbit-mark.png
+	@mkdir -p $(dir $@)
+	$(HOST_CXX) -std=c++17 -O2 -Wall -Wextra -Werror -Iinclude -idirafter $(SDK)/include $(shell pkg-config --cflags freetype2) -o $@ tests/dashboard_test.cpp src/modules/dashboard.cpp src/ui/ui.cpp src/input/navigation.cpp src/graphics/font_renderer.cpp src/graphics/texture.cpp src/graphics/canvas.cpp $(shell pkg-config --libs freetype2)
+
 .PHONY: test-host
-test-host: build/tests/canvas_test build/tests/font_renderer_test build/tests/texture_test
+test-host: build/tests/canvas_test build/tests/font_renderer_test build/tests/texture_test build/tests/navigation_test build/tests/ui_test build/tests/dashboard_test
 	./build/tests/canvas_test
 	./build/tests/font_renderer_test
 	./build/tests/texture_test
+	./build/tests/navigation_test
+	./build/tests/ui_test
+	./build/tests/dashboard_test
 
 clean:
 	rm -rf build eboot.bin pkg.gp4 sce_sys/param.sfo

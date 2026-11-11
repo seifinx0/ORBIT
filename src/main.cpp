@@ -1,58 +1,12 @@
 #include "orbit/graphics/canvas.hpp"
 #include "orbit/graphics/font_renderer.hpp"
 #include "orbit/graphics/texture.hpp"
+#include "orbit/input/controller.hpp"
+#include "orbit/modules/dashboard.hpp"
 #include "orbit/platform/video_output.hpp"
 
 #include <cstdio>
 #include <cstdint>
-
-namespace {
-using orbit::graphics::Canvas;
-using orbit::graphics::Color;
-constexpr Color kNavy{7, 13, 28};
-constexpr Color kPanel{12, 23, 43};
-constexpr Color kCyan{48, 207, 255};
-constexpr Color kBlue{42, 103, 240};
-constexpr Color kWhite{231, 241, 252};
-constexpr Color kMuted{113, 143, 176};
-constexpr Color kGreen{72, 224, 174};
-constexpr Color kAmber{255, 175, 92};
-
-void draw_centered_text(Canvas& canvas, orbit::graphics::FontRenderer& font,
-                        int y, const char* value, int size, Color color) noexcept {
-    const int width = font.measure_width(value, size);
-    font.draw_text(canvas, (orbit::platform::VideoOutput::kWidth - width) / 2,
-                   y, value, size, color);
-}
-
-void draw_foundation(Canvas& canvas, orbit::graphics::FontRenderer& font,
-                     const orbit::graphics::Texture* mark, bool typography_ready) noexcept {
-    canvas.clear(kNavy);
-    canvas.fill_rect(0, 0, 1920, 5, kCyan);
-    canvas.fill_rect_alpha(150, 137, 1620, 1, {35, 73, 105}, 130);
-    canvas.fill_rect_alpha(150, 943, 1620, 1, {35, 73, 105}, 130);
-
-    if (mark) mark->draw(canvas, 832, 313, 256, 256, true);
-    else {
-        canvas.circle_outline(960, 441, 88, kBlue);
-        canvas.circle_outline(960, 441, 71, {21, 71, 111});
-        canvas.circle_outline(960, 441, 102, {14, 44, 72});
-        canvas.fill_rect(954, 435, 13, 13, kCyan);
-        canvas.line(897, 504, 1023, 378, kCyan);
-    }
-
-    canvas.fill_rect_alpha(590, 740, 740, 126, kPanel, 238);
-    canvas.fill_rect(590, 740, 4, 126, kCyan);
-    canvas.fill_rect(626, 778, 12, 12, typography_ready ? kGreen : kAmber);
-
-    if (!typography_ready) return;
-    draw_centered_text(canvas, font, 548, "ORBIT", 92, kWhite);
-    draw_centered_text(canvas, font, 666, "SYSTEM COMMAND CENTER", 30, kCyan);
-    font.draw_text(canvas, 660, 768, "GRAPHICS FOUNDATION", 23, kWhite);
-    font.draw_text(canvas, 660, 805, "PNG TEXTURE CACHE  /  FREETYPE  /  ALPHA BLENDING", 16, kMuted);
-    draw_centered_text(canvas, font, 891, "SCEVIDEOOUT  /  1920 X 1080  /  VSYNC", 16, kMuted);
-}
-}
 
 int main() {
     std::setvbuf(stdout, nullptr, _IONBF, 0);
@@ -74,16 +28,39 @@ int main() {
     const auto* mark = textures.get_png("/app0/assets/images/orbit-mark.png");
     if (!mark) std::puts("ORBIT: ORBIT mark texture unavailable; using vector fallback");
 
-    for (int index = 0; index < orbit::platform::VideoOutput::kBufferCount; ++index) {
-        Canvas canvas(video.buffer(index), orbit::platform::VideoOutput::kWidth,
-                      orbit::platform::VideoOutput::kHeight);
-        draw_foundation(canvas, font, mark, typography_ready);
+    orbit::modules::Dashboard dashboard;
+    if (!dashboard.initialize(mark)) {
+        std::puts("ORBIT: dashboard initialization failed");
+        for (;;) {}
     }
 
-    std::puts("ORBIT: cached PNG texture, FreeType text, and canvas ready; entering v-sync presentation loop");
+    for (int index = 0; index < orbit::platform::VideoOutput::kBufferCount; ++index) {
+        orbit::graphics::Canvas canvas(video.buffer(index), orbit::platform::VideoOutput::kWidth,
+                                      orbit::platform::VideoOutput::kHeight);
+        dashboard.render(canvas, font);
+    }
+
+    orbit::input::ControllerDevice controller;
+    const bool controller_ready = controller.initialize();
+    if (!controller_ready) std::puts("ORBIT: controller unavailable; dashboard remains on screen");
+    orbit::input::NavigationInput navigation;
+
+    std::puts("ORBIT: controller-driven dashboard ready; entering v-sync presentation loop");
     std::int64_t frame = 0;
     int index = 0;
     for (;;) {
+        orbit::input::PadSample sample{};
+        if (!controller.read(sample)) sample = {};
+        const auto events = navigation.update(sample, 16);
+        bool redraw = dashboard.tick(16);
+        if (events) redraw = dashboard.handle(events) || redraw;
+        if (redraw) {
+            for (int buffer = 0; buffer < orbit::platform::VideoOutput::kBufferCount; ++buffer) {
+                orbit::graphics::Canvas canvas(video.buffer(buffer), orbit::platform::VideoOutput::kWidth,
+                                               orbit::platform::VideoOutput::kHeight);
+                dashboard.render(canvas, font);
+            }
+        }
         if (!video.present(index, frame++)) {
             std::puts("ORBIT: frame submission/wait failed");
             for (;;) {}
