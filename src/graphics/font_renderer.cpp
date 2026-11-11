@@ -32,7 +32,7 @@ namespace {
 constexpr int kFirstCharacter = 32;
 constexpr int kLastCharacter = 126;
 constexpr int kCharacterSlots = 128;
-constexpr int kSizeSlots = 4;
+constexpr int kSizeSlots = 5;
 }
 
 struct FontRenderer::State {

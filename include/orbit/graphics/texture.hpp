@@ -18,6 +18,7 @@ public:
     Texture& operator=(Texture&& other) noexcept;
 
     bool load_png(const char* path) noexcept;
+    static bool png_decoded_size(const char* path, std::size_t& bytes) noexcept;
     void reset() noexcept;
     void draw(Canvas& canvas, int x, int y, int width, int height,
               bool bilinear = true) const noexcept;
@@ -49,10 +50,12 @@ private:
     struct Entry {
         std::array<char, kPathCapacity> path{};
         Texture texture{};
+        std::uint32_t last_used{0};
     };
     std::array<Entry, kCapacity> entries_{};
     std::size_t count_ = 0;
     std::size_t bytes_ = 0;
+    std::uint32_t clock_{0};
 };
 
 } // namespace orbit::graphics

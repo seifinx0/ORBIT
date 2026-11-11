@@ -3,6 +3,10 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
+#include <cstdio>
+#include <string>
+#include <sys/stat.h>
+#include <unistd.h>
 
 int main() {
     using namespace orbit::graphics;
@@ -26,4 +30,22 @@ int main() {
     assert(cache.count() == 1);
     cache.clear();
     assert(cache.count() == 0 && cache.bytes() == 0);
+
+    const char* fixture = "build/tests/texture-lru";
+    assert(mkdir(fixture, 0700) == 0);
+    for (int i = 0; i < 17; ++i) {
+        char path[96]{}; std::snprintf(path, sizeof(path), "%s/image-%02d.png", fixture, i);
+        FILE* in = std::fopen("assets/images/orbit-mark.png", "rb");
+        FILE* out = std::fopen(path, "wb"); assert(in && out);
+        unsigned char block[4096]; std::size_t count = 0;
+        while ((count = std::fread(block, 1, sizeof(block), in)) != 0) assert(std::fwrite(block, 1, count, out) == count);
+        std::fclose(in); std::fclose(out);
+        assert(cache.get_png(path) && cache.count() <= TextureCache::kCapacity);
+    }
+    assert(cache.count() == TextureCache::kCapacity && cache.bytes() <= TextureCache::kMaxCacheBytes);
+    assert(cache.get_png("build/tests/texture-lru/image-00.png"));
+    assert(cache.count() == TextureCache::kCapacity && cache.bytes() <= TextureCache::kMaxCacheBytes);
+    cache.clear();
+    for (int i = 0; i < 17; ++i) { char path[96]{}; std::snprintf(path, sizeof(path), "%s/image-%02d.png", fixture, i); unlink(path); }
+    rmdir(fixture);
 }

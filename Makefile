@@ -1,5 +1,5 @@
-TITLE       := ORBIT Command Center
-VERSION     := 0.4.0
+TITLE       := ORBIT Game Library
+VERSION     := 0.5.0
 TITLE_ID    := ORBT00001
 CONTENT_ID  := IV0000-ORBT00001_00-ORBITFOUNDATION1
 
@@ -34,14 +34,14 @@ else
 $(error Unsupported host OS: $(HOST_OS))
 endif
 
-SOURCES     := src/main.cpp src/platform/video_output.cpp src/platform/controller.cpp src/graphics/canvas.cpp src/graphics/font_renderer.cpp src/graphics/texture.cpp src/ui/ui.cpp src/input/navigation.cpp src/modules/dashboard.cpp
+SOURCES     := src/main.cpp src/platform/video_output.cpp src/platform/controller.cpp src/platform/title_launcher.cpp src/graphics/canvas.cpp src/graphics/font_renderer.cpp src/graphics/texture.cpp src/ui/ui.cpp src/input/navigation.cpp src/library/catalog.cpp src/library/preferences.cpp src/modules/dashboard.cpp
 OBJECTS     := $(patsubst src/%.cpp,build/obj/%.o,$(SOURCES))
-CXXFLAGS    := --target=x86_64-pc-freebsd12-elf -fPIC -funwind-tables -fno-exceptions -fno-rtti -O2 -c -Isrc -Iinclude -isysroot $(SDK) -isystem $(SDK)/include -isystem $(SDK)/include/c++/v1
-LDFLAGS     := -m elf_x86_64 -pie --script $(SDK)/link.x --eh-frame-hdr -L$(SDK)/lib -lc -lkernel -lc++ -lSceVideoOut -lSceSysmodule -lSceFreeType -lScePad -lSceUserService $(SDK)/lib/crt1.o
+CXXFLAGS    := --target=x86_64-pc-freebsd12-elf -DORBIT_PS4 -fPIC -funwind-tables -fno-exceptions -fno-rtti -O2 -c -Isrc -Iinclude -isysroot $(SDK) -isystem $(SDK)/include -isystem $(SDK)/include/c++/v1
+LDFLAGS     := -m elf_x86_64 -pie --script $(SDK)/link.x --eh-frame-hdr -L$(SDK)/lib -lc -lkernel -lc++ -lSceVideoOut -lSceSysmodule -lSceFreeType -lScePad -lSceUserService -lSceLncUtil $(SDK)/lib/crt1.o
 ASSETS      := $(shell find assets -type f ! -name .gitkeep -print | sort)
 HOST_CXX    ?= c++
 
-.PHONY: all clean package inspect
+.PHONY: all clean package inspect test-host
 all: build/$(CONTENT_ID).pkg
 
 $(PKGTOOL_STAMP):
@@ -112,18 +112,23 @@ build/tests/ui_test: tests/ui_test.cpp src/ui/ui.cpp src/graphics/font_renderer.
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) -std=c++17 -O2 -Wall -Wextra -Werror -Iinclude -idirafter $(SDK)/include $(shell pkg-config --cflags freetype2) -o $@ tests/ui_test.cpp src/ui/ui.cpp src/graphics/font_renderer.cpp src/graphics/texture.cpp src/graphics/canvas.cpp $(shell pkg-config --libs freetype2)
 
-build/tests/dashboard_test: tests/dashboard_test.cpp src/modules/dashboard.cpp src/ui/ui.cpp src/input/navigation.cpp src/graphics/font_renderer.cpp src/graphics/texture.cpp src/graphics/canvas.cpp include/orbit/modules/dashboard.hpp assets/fonts/Quicksand-Medium.ttf assets/images/orbit-mark.png
+build/tests/dashboard_test: tests/dashboard_test.cpp src/modules/dashboard.cpp src/platform/title_launcher.cpp src/library/catalog.cpp src/library/preferences.cpp src/ui/ui.cpp src/input/navigation.cpp src/graphics/font_renderer.cpp src/graphics/texture.cpp src/graphics/canvas.cpp include/orbit/modules/dashboard.hpp assets/fonts/Quicksand-Medium.ttf assets/images/orbit-mark.png
 	@mkdir -p $(dir $@)
-	$(HOST_CXX) -std=c++17 -O2 -Wall -Wextra -Werror -Iinclude -idirafter $(SDK)/include $(shell pkg-config --cflags freetype2) -o $@ tests/dashboard_test.cpp src/modules/dashboard.cpp src/ui/ui.cpp src/input/navigation.cpp src/graphics/font_renderer.cpp src/graphics/texture.cpp src/graphics/canvas.cpp $(shell pkg-config --libs freetype2)
+	$(HOST_CXX) -std=c++17 -O2 -Wall -Wextra -Werror -Iinclude -idirafter $(SDK)/include $(shell pkg-config --cflags freetype2) -o $@ tests/dashboard_test.cpp src/modules/dashboard.cpp src/platform/title_launcher.cpp src/library/catalog.cpp src/library/preferences.cpp src/ui/ui.cpp src/input/navigation.cpp src/graphics/font_renderer.cpp src/graphics/texture.cpp src/graphics/canvas.cpp $(shell pkg-config --libs freetype2)
+
+build/tests/library_test: tests/library_test.cpp src/library/catalog.cpp src/library/preferences.cpp include/orbit/library/game.hpp include/orbit/library/preferences.hpp
+	@mkdir -p $(dir $@)
+	$(HOST_CXX) -std=c++17 -O2 -Wall -Wextra -Werror -Iinclude -o $@ tests/library_test.cpp src/library/catalog.cpp src/library/preferences.cpp
 
 .PHONY: test-host
-test-host: build/tests/canvas_test build/tests/font_renderer_test build/tests/texture_test build/tests/navigation_test build/tests/ui_test build/tests/dashboard_test
+test-host: build/tests/canvas_test build/tests/font_renderer_test build/tests/texture_test build/tests/navigation_test build/tests/ui_test build/tests/dashboard_test build/tests/library_test
 	./build/tests/canvas_test
 	./build/tests/font_renderer_test
 	./build/tests/texture_test
 	./build/tests/navigation_test
 	./build/tests/ui_test
 	./build/tests/dashboard_test
+	./build/tests/library_test
 
 clean:
 	rm -rf build eboot.bin pkg.gp4 sce_sys/param.sfo

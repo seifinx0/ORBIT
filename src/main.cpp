@@ -20,7 +20,7 @@ int main() {
 
     orbit::graphics::FontRenderer font;
     const bool typography_ready = font.initialize("/app0/assets/fonts/Quicksand-Medium.ttf") &&
-                                  font.prepare_size(92) && font.prepare_size(30) &&
+                                  font.prepare_size(92) && font.prepare_size(50) && font.prepare_size(30) &&
                                   font.prepare_size(23) && font.prepare_size(16);
     if (!typography_ready) std::puts("ORBIT: FreeType initialization or glyph cache failed");
 
@@ -29,8 +29,8 @@ int main() {
     if (!mark) std::puts("ORBIT: ORBIT mark texture unavailable; using vector fallback");
 
     orbit::modules::Dashboard dashboard;
-    if (!dashboard.initialize(mark)) {
-        std::puts("ORBIT: dashboard initialization failed");
+    if (!dashboard.initialize(mark, &textures)) {
+        std::puts("ORBIT: game library initialization failed");
         for (;;) {}
     }
 
@@ -42,10 +42,10 @@ int main() {
 
     orbit::input::ControllerDevice controller;
     const bool controller_ready = controller.initialize();
-    if (!controller_ready) std::puts("ORBIT: controller unavailable; dashboard remains on screen");
+    if (!controller_ready) std::puts("ORBIT: controller unavailable; game library remains on screen");
     orbit::input::NavigationInput navigation;
 
-    std::puts("ORBIT: controller-driven dashboard ready; entering v-sync presentation loop");
+    std::puts("ORBIT: controller-driven game library ready; entering v-sync presentation loop");
     std::int64_t frame = 0;
     int index = 0;
     for (;;) {

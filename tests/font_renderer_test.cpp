@@ -21,6 +21,7 @@ int main() {
     FontRenderer font;
     assert(font.initialize("assets/fonts/Quicksand-Medium.ttf"));
     assert(font.prepare_size(32));
+    assert(font.prepare_size(50));
     assert(font.line_height(32) >= 32);
     const int label_width = font.measure_width("ORBIT 2.0", 32);
     assert(label_width > 100 && label_width < width);
