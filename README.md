@@ -1,6 +1,6 @@
 # ORBIT
 
-ORBIT is a native OpenOrbis PS4 homebrew command center. This fresh project currently contains the Milestone 1 platform foundation: a native SceVideoOut application that allocates two 1920×1080 buffers, draws a branded bring-up screen, and presents them on v-sync.
+ORBIT is a native OpenOrbis PS4 homebrew command center. Its verified SceVideoOut foundation remains intact; Milestone 2 is underway with cached FreeType typography and alpha-composited canvas drawing on the existing 1920×1080 double-buffered renderer.
 
 ## Build
 
@@ -16,12 +16,14 @@ make inspect
 
 The package is written to `build/IV0000-ORBT00001_00-ORBITFOUNDATION1.pkg`. The Makefile archives the LibOrbisPkg source into `build/tools/source`, publishes its `PkgTool.Core` as a self-contained Linux x64 single-file executable at `build/tools/publish/PkgTool.Core`, then uses that replacement for SFO and PKG operations. Set `LIBORBISPKG_ROOT=/path/to/LibOrbisPkg` if the checkout is elsewhere. The replacement avoids the bundled .NET Core 3.0 executable’s OpenSSL 3 incompatibility and requires no system-wide runtime changes. `make inspect` lists package entries and validates package hashes and signatures.
 
+`make test-host` runs canvas alpha/clipping checks and a host FreeType rendering check; that optional target needs host FreeType development headers and `pkg-config`. The latest Milestone 2 test package is version `0.2.0`; see [the graphics progress note](docs/milestone-2-graphics.md) for what changed and what still needs console testing.
+
 Install the PKG on a GoldHEN-enabled PS4 using the console’s package installer. A host build cannot verify installation or on-console launch; those remain physical hardware checks.
 
 ## Project layout
 
 - `src/platform/`: OpenOrbis platform boundary.
-- `src/graphics/`: software canvas primitives for the foundation renderer.
+- `src/graphics/`: software canvas, alpha compositing, and cached FreeType glyph rendering.
 - `include/orbit/`: public interfaces.
 - `config/`: default interface configuration.
 - `assets/`: visual and audio assets as they are introduced.

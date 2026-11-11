@@ -11,8 +11,10 @@ public:
     Canvas(std::uint32_t* pixels, int width, int height) noexcept;
     void clear(Color color) noexcept;
     void fill_rect(int x, int y, int width, int height, Color color) noexcept;
+    void fill_rect_alpha(int x, int y, int width, int height, Color color,
+                         std::uint8_t opacity) noexcept;
+    void blend_pixel(int x, int y, Color color, std::uint8_t opacity) noexcept;
     void line(int x0, int y0, int x1, int y1, Color color) noexcept;
-    void text(int x, int y, const char* value, int scale, Color color) noexcept;
     void circle_outline(int cx, int cy, int radius, Color color) noexcept;
 private:
     void pixel(int x, int y, Color color) noexcept;

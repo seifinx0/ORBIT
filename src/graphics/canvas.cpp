@@ -3,29 +3,6 @@
 #include <cstdlib>
 
 namespace orbit::graphics {
-namespace {
-constexpr std::uint8_t kGlyphs[37][7] = {
-    {14,17,19,21,25,17,14}, {4,12,4,4,4,4,14}, {14,17,1,2,4,8,31},
-    {30,1,1,14,1,1,30}, {2,6,10,18,31,2,2}, {31,16,16,30,1,1,30},
-    {14,16,16,30,17,17,14}, {31,1,2,4,8,8,8}, {14,17,17,14,17,17,14},
-    {14,17,17,15,1,1,14}, {14,17,17,31,17,17,17}, {30,17,17,30,17,17,30},
-    {14,17,16,16,16,17,14}, {30,17,17,17,17,17,30}, {31,16,16,30,16,16,31},
-    {31,16,16,30,16,16,16}, {14,17,16,23,17,17,15}, {17,17,17,31,17,17,17},
-    {14,4,4,4,4,4,14}, {7,2,2,2,18,18,12}, {17,18,20,24,20,18,17},
-    {16,16,16,16,16,16,31}, {17,27,21,21,17,17,17}, {17,25,21,19,17,17,17},
-    {14,17,17,17,17,17,14}, {30,17,17,30,16,16,16}, {14,17,17,17,21,18,13},
-    {30,17,17,30,20,18,17}, {15,16,16,14,1,1,30}, {31,4,4,4,4,4,4},
-    {17,17,17,17,17,17,14}, {17,17,17,17,17,10,4}, {17,17,17,21,21,21,10},
-    {17,17,10,4,10,17,17}, {17,17,10,4,4,4,4}, {31,1,2,4,8,16,31},
-    {0,0,0,0,0,0,0}
-};
-int glyph_index(char c) noexcept {
-    if (c >= '0' && c <= '9') return c - '0';
-    if (c >= 'A' && c <= 'Z') return c - 'A' + 10;
-    return 36;
-}
-}
-
 Canvas::Canvas(std::uint32_t* pixels, int width, int height) noexcept
     : pixels_(pixels), width_(width), height_(height) {}
 
@@ -39,16 +16,46 @@ void Canvas::pixel(int x, int y, Color color) noexcept {
 void Canvas::clear(Color color) noexcept { fill_rect(0, 0, width_, height_, color); }
 
 void Canvas::fill_rect(int x, int y, int width, int height, Color color) noexcept {
+    fill_rect_alpha(x, y, width, height, color, 255);
+}
+
+void Canvas::fill_rect_alpha(int x, int y, int width, int height, Color color,
+                             std::uint8_t opacity) noexcept {
+    if (!pixels_ || width <= 0 || height <= 0 || opacity == 0) return;
     const int x0 = x < 0 ? 0 : x;
     const int y0 = y < 0 ? 0 : y;
     const int x1 = x + width > width_ ? width_ : x + width;
     const int y1 = y + height > height_ ? height_ : y + height;
-    const std::uint32_t value = 0x80000000u | (static_cast<std::uint32_t>(color.r) << 16) |
-                                (static_cast<std::uint32_t>(color.g) << 8) | color.b;
-    for (int row = y0; row < y1; ++row) {
-        auto* target = pixels_ + static_cast<std::size_t>(row) * width_ + x0;
-        for (int col = x0; col < x1; ++col) *target++ = value;
+    if (x0 >= x1 || y0 >= y1) return;
+    if (opacity == 255) {
+        const std::uint32_t value = 0x80000000u | (static_cast<std::uint32_t>(color.r) << 16) |
+                                    (static_cast<std::uint32_t>(color.g) << 8) | color.b;
+        for (int row = y0; row < y1; ++row) {
+            auto* target = pixels_ + static_cast<std::size_t>(row) * width_ + x0;
+            for (int column = x0; column < x1; ++column) *target++ = value;
+        }
+        return;
     }
+    for (int row = y0; row < y1; ++row)
+        for (int col = x0; col < x1; ++col)
+            blend_pixel(col, row, color, opacity);
+}
+
+void Canvas::blend_pixel(int x, int y, Color color, std::uint8_t opacity) noexcept {
+    if (!pixels_ || x < 0 || y < 0 || x >= width_ || y >= height_ || opacity == 0) return;
+    auto& destination = pixels_[static_cast<std::size_t>(y) * width_ + x];
+    if (opacity == 255) {
+        destination = 0x80000000u | (static_cast<std::uint32_t>(color.r) << 16) |
+                      (static_cast<std::uint32_t>(color.g) << 8) | color.b;
+        return;
+    }
+
+    const unsigned inverse = 255u - opacity;
+    const unsigned red = ((destination >> 16) & 0xffu) * inverse + color.r * opacity;
+    const unsigned green = ((destination >> 8) & 0xffu) * inverse + color.g * opacity;
+    const unsigned blue = (destination & 0xffu) * inverse + color.b * opacity;
+    destination = 0x80000000u | (((red + 127u) / 255u) << 16) |
+                  (((green + 127u) / 255u) << 8) | ((blue + 127u) / 255u);
 }
 
 void Canvas::line(int x0, int y0, int x1, int y1, Color color) noexcept {
@@ -61,17 +68,6 @@ void Canvas::line(int x0, int y0, int x1, int y1, Color color) noexcept {
         const int twice = 2 * error;
         if (twice >= dy) { error += dy; x0 += sx; }
         if (twice <= dx) { error += dx; y0 += sy; }
-    }
-}
-
-void Canvas::text(int x, int y, const char* value, int scale, Color color) noexcept {
-    if (!value || scale < 1) return;
-    for (const char* cursor = value; *cursor; ++cursor, x += 6 * scale) {
-        if (*cursor == ' ') continue;
-        const auto& glyph = kGlyphs[glyph_index(*cursor)];
-        for (int row = 0; row < 7; ++row)
-            for (int col = 0; col < 5; ++col)
-                if (glyph[row] & (1u << (4 - col))) fill_rect(x + col * scale, y + row * scale, scale, scale, color);
     }
 }
 

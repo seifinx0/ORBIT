@@ -24,4 +24,6 @@ The replacement was executed successfully for `sfo_new`, multiple `sfo_setentry`
 - Extracted package payloads matched their build inputs byte-for-byte: `eboot.bin`, `icon0.png`, `sce_sys/about/right.sprx`, `sce_module/libc.prx`, and `sce_module/libSceFios2.prx`.
 - `pkg_listentries` and `pkg_extract` confirmed the package metadata and inner payload. The package builder also generates the expected keystone entry.
 
-The application ELF and FSELF were preserved and included in the package. The package build does not validate runtime execution. Physical PS4 install, launch, controller behavior, display output, and sustained frame pacing still require GoldHEN hardware testing.
+The original Milestone 1 package was reported installed and tested on a physical PS4 at 1920×1080 and approximately 59.95 FPS. The 0.2.0 FreeType build is host-built and package-validated, but its new text rendering still needs a physical PS4 check.
+
+The 0.2.0 package keeps the same output path and Content ID, updates `APP_VER` to `0.2.0`, and includes `assets/fonts/Quicksand-Medium.ttf` plus its OFL copyright notice. Host tests and package extraction verified the new font files; `pkg_validate` passed. The current PKG is 6,619,136 bytes at `build/IV0000-ORBT00001_00-ORBITFOUNDATION1.pkg`.
