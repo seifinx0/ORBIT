@@ -4,14 +4,17 @@ ORBIT is a native OpenOrbis PS4 homebrew command center. This fresh project curr
 
 ## Build
 
-Requirements: OpenOrbis SDK, Clang, LLD, Make, and a compatible runtime for the SDK package tools. The SDK’s Linux `PkgTool.Core` targets .NET Core 3.0 and requires a compatible OpenSSL `libssl` version.
+Requirements: OpenOrbis SDK, Clang, LLD, Make, the local .NET 8 installation at `~/.dotnet`, and the LibOrbisPkg source checkout beside the SDK under `../Tools/LibOrbisPkg`.
 
 ```sh
 export OO_PS4_TOOLCHAIN="$HOME/Downloads/PS4-Dev/SDK"
+export DOTNET_ROOT="$HOME/.dotnet"
+export PATH="$DOTNET_ROOT:$PATH"
 make
+make inspect
 ```
 
-The package is written to `build/IV0000-ORBT00001_00-ORBITFOUNDATION.pkg`. `make inspect` lists its package entries. The SDK’s Linux `PkgTool.Core` needs `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1` on systems without ICU; the Makefile sets this only for package tool invocations. On the current host, `pkg_build` aborts with `No usable version of libssl was found`: only .NET 6 and OpenSSL 3 are installed. The ELF/FSELF build works, but producing a PKG needs a compatible runtime.
+The package is written to `build/IV0000-ORBT00001_00-ORBITFOUNDATION1.pkg`. The Makefile archives the LibOrbisPkg source into `build/tools/source`, publishes its `PkgTool.Core` as a self-contained Linux x64 single-file executable at `build/tools/publish/PkgTool.Core`, then uses that replacement for SFO and PKG operations. Set `LIBORBISPKG_ROOT=/path/to/LibOrbisPkg` if the checkout is elsewhere. The replacement avoids the bundled .NET Core 3.0 executable’s OpenSSL 3 incompatibility and requires no system-wide runtime changes. `make inspect` lists package entries and validates package hashes and signatures.
 
 Install the PKG on a GoldHEN-enabled PS4 using the console’s package installer. A host build cannot verify installation or on-console launch; those remain physical hardware checks.
 
