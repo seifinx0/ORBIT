@@ -1,5 +1,5 @@
 TITLE       := ORBIT Command Center
-VERSION     := 0.2.0
+VERSION     := 0.3.0
 TITLE_ID    := ORBT00001
 CONTENT_ID  := IV0000-ORBT00001_00-ORBITFOUNDATION1
 
@@ -34,7 +34,7 @@ else
 $(error Unsupported host OS: $(HOST_OS))
 endif
 
-SOURCES     := src/main.cpp src/platform/video_output.cpp src/graphics/canvas.cpp src/graphics/font_renderer.cpp
+SOURCES     := src/main.cpp src/platform/video_output.cpp src/graphics/canvas.cpp src/graphics/font_renderer.cpp src/graphics/texture.cpp
 OBJECTS     := $(patsubst src/%.cpp,build/obj/%.o,$(SOURCES))
 CXXFLAGS    := --target=x86_64-pc-freebsd12-elf -fPIC -funwind-tables -fno-exceptions -fno-rtti -O2 -c -Isrc -Iinclude -isysroot $(SDK) -isystem $(SDK)/include -isystem $(SDK)/include/c++/v1
 LDFLAGS     := -m elf_x86_64 -pie --script $(SDK)/link.x --eh-frame-hdr -L$(SDK)/lib -lc -lkernel -lc++ -lSceVideoOut -lSceSysmodule -lSceFreeType $(SDK)/lib/crt1.o
@@ -98,10 +98,15 @@ build/tests/font_renderer_test: tests/font_renderer_test.cpp src/graphics/font_r
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) -std=c++17 -O2 -Wall -Wextra -Werror -Iinclude -idirafter $(SDK)/include $(shell pkg-config --cflags freetype2) -o $@ tests/font_renderer_test.cpp src/graphics/font_renderer.cpp src/graphics/canvas.cpp $(shell pkg-config --libs freetype2)
 
+build/tests/texture_test: tests/texture_test.cpp src/graphics/texture.cpp src/graphics/canvas.cpp include/orbit/graphics/texture.hpp assets/images/orbit-mark.png
+	@mkdir -p $(dir $@)
+	$(HOST_CXX) -std=c++17 -O2 -Wall -Wextra -Werror -Iinclude -idirafter $(SDK)/include -o $@ tests/texture_test.cpp src/graphics/texture.cpp src/graphics/canvas.cpp
+
 .PHONY: test-host
-test-host: build/tests/canvas_test build/tests/font_renderer_test
+test-host: build/tests/canvas_test build/tests/font_renderer_test build/tests/texture_test
 	./build/tests/canvas_test
 	./build/tests/font_renderer_test
+	./build/tests/texture_test
 
 clean:
 	rm -rf build eboot.bin pkg.gp4 sce_sys/param.sfo

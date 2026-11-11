@@ -13,6 +13,15 @@ public:
     void fill_rect(int x, int y, int width, int height, Color color) noexcept;
     void fill_rect_alpha(int x, int y, int width, int height, Color color,
                          std::uint8_t opacity) noexcept;
+    void fill_vertical_gradient(int x, int y, int width, int height, Color top,
+                                Color bottom) noexcept;
+    void stroke_rect(int x, int y, int width, int height, Color color,
+                     int thickness = 1) noexcept;
+    void fill_rounded_rect(int x, int y, int width, int height, int radius,
+                           Color color, std::uint8_t opacity = 255) noexcept;
+    void draw_rgba(const std::uint8_t* rgba, int source_width, int source_height,
+                   int source_stride, int x, int y, int width, int height,
+                   bool bilinear = true) noexcept;
     void blend_pixel(int x, int y, Color color, std::uint8_t opacity) noexcept;
     void line(int x0, int y0, int x1, int y1, Color color) noexcept;
     void circle_outline(int cx, int cy, int radius, Color color) noexcept;

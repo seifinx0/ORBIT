@@ -1,6 +1,6 @@
 # Milestone 2 graphics progress
 
-## Implemented in 0.2.0
+## Implemented in 0.2.0 (physically verified)
 
 - Kept the existing direct SceVideoOut path, double-buffer setup, screen dimensions, and v-sync loop.
 - Replaced the 5×7 diagnostic bitmap font with SDK FreeType rendering and a bundled Quicksand Medium font under its OFL license.
@@ -9,17 +9,21 @@
 - Updated the existing bring-up screen typography to use the cache and package the font under `/app0/assets/fonts`.
 - Added host checks for clipped canvas writes, opaque and translucent fills, glyph metrics, anti-aliased text pixels, and clipped text.
 
-The host font test links against host FreeType and stubs only the PS4 sysmodule-load call. The PS4 build still uses the OpenOrbis FreeType headers/libraries and `ORBIS_SYSMODULE_FREETYPE_OL`, following the installed SDK font sample.
+The host font test links against host FreeType and stubs only the PS4 sysmodule-load call. The PS4 build still uses the OpenOrbis FreeType headers/libraries and `ORBIS_SYSMODULE_FREETYPE_OL`, following the installed SDK font sample. The user reports that the 0.2.0 typography checkpoint has been installed and tested on the physical jailbroken PS4.
 
-## Hardware check needed
+## Implemented in 0.3.0 (host-built; console check pending)
 
-Milestone 1 was previously reported as installed and physically verified at 1920×1080 and approximately 59.95 FPS. That result applies to the original foundation. This 0.2.0 typography build has not yet been tested on-console.
+- Added `Canvas::draw_rgba` for clipped, scaled RGBA drawing with nearest or bilinear sampling. Bilinear filtering interpolates premultiplied color to avoid colored fringes around transparent edges.
+- Added vertical gradients, stroked rectangles, and rounded rectangle fills while retaining the existing canvas and coordinate space.
+- Added move-only PNG `Texture` resources and a 16-entry cache with 256-byte path limits, 16 MiB per-image limit, and 32 MiB aggregate decoded-pixel limit. Cache hits allocate nothing; `clear()` releases decoder-owned memory.
+- Uses SDK-bundled `stb_image.h` in PNG-only mode. Decoding happens at load time, and the presentation loop performs no image decoding or texture allocation.
+- Packages `assets/images/orbit-mark.png`; the foundation screen draws it with a vector fallback if image loading fails.
+- Added host tests for scaling, alpha fringe behavior, clipping, primitives, decode failure, cache hits/cleanup, and the actual ORBIT image.
 
-For the new PKG, install/update ORBIT and confirm:
+The 0.3.0 package needs a physical PS4 check:
 
-1. The ORBIT wordmark and status copy render with smooth edges and correct spacing.
-2. All four text rows are readable, with no missing glyphs, corruption, or clipping.
-3. The display remains at 1920×1080 and the static screen continues to present smoothly.
-4. Report the observed frame rate and any boot delay or memory error.
+1. Install/update ORBIT and confirm the image is sharp, centered, and blends cleanly against navy, with no green/red halo around transparent edges.
+2. Confirm text and status panel still render normally at 1920×1080.
+3. Check for stable presentation, startup delay, or memory errors and report observed frame rate.
 
-Textures, image decoding, reusable UI components, screen/layout management, controller navigation, focus states, and transitions remain future Milestone 2 work.
+Reusable UI components, screen/layout management, controller navigation, focus states, and transitions remain unfinished Milestone 2/3 work.
